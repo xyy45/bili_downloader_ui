@@ -1,0 +1,46 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Download ffmpeg for Windows
+        run: |
+          mkdir bin
+          curl -L -o ffmpeg.zip https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+          tar -xf ffmpeg.zip
+          $folder = Get-ChildItem -Directory | Where-Object { $_.Name -like "ffmpeg-*-essentials_build" } | Select-Object -First 1
+          Copy-Item "$($folder.FullName)\bin\ffmpeg.exe" "bin\ffmpeg.exe"
+          Copy-Item "$($folder.FullName)\bin\ffprobe.exe" "bin\ffprobe.exe"
+
+      - name: Build exe
+        run: |
+          pyinstaller --noconfirm --windowed --onefile `
+            --add-binary "bin\ffmpeg.exe;." `
+            bili_downloader_ui.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bili_downloader_windows
+          path: dist/*.exe
