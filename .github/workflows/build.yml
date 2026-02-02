@@ -42,7 +42,7 @@ jobs:
     # 5️⃣ 使用 PyInstaller 打包
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller --onefile bili_dowanloader_ui.py --name bili_downloader_ui --add-binary "ffmpeg.exe;."
+        pyinstaller --onefile bili_downloader_ui.py --name bili_downloader_ui --add-binary "ffmpeg.exe;."
 
     # 6️⃣ 上传 exe 作为 artifact
     - name: Upload artifact
