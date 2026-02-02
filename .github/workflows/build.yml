@@ -1,46 +1,97 @@
 name: Build Windows EXE
 
+# 触发条件：push 到 main 或手动触发
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build_windows:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    # 1️⃣ 获取仓库代码
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+    # 2️⃣ 设置 Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+    # 3️⃣ 安装依赖
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller requests tqdm
 
-      - name: Download ffmpeg for Windows
-        run: |
-          mkdir bin
-          curl -L -o ffmpeg.zip https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
-          tar -xf ffmpeg.zip
-          $folder = Get-ChildItem -Directory | Where-Object { $_.Name -like "ffmpeg-*-essentials_build" } | Select-Object -First 1
-          Copy-Item "$($folder.FullName)\bin\ffmpeg.exe" "bin\ffmpeg.exe"
-          Copy-Item "$($folder.FullName)\bin\ffprobe.exe" "bin\ffprobe.exe"
+    # 4️⃣ 复制 ffmpeg 到项目目录（假设你把 ffmpeg.exe 放在仓库里或者提供下载）
+    - name: Prepare ffmpeg
+      run: |
+        if (!(Test-Path -Path ".\ffmpeg.exe")) {
+            Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile "ffmpeg.zip"
+            Expand-Archive ffmpeg.zip -DestinationPath ".\ffmpeg_temp"
+            Copy-Item -Path ".\ffmpeg_temp\ffmpeg-*-essentials_build\bin\ffmpeg.exe" -Destination ".\ffmpeg.exe"
+        }
 
-      - name: Build exe
-        run: |
-          pyinstaller --noconfirm --windowed --onefile `
-            --add-binary "bin\ffmpeg.exe;." `
-            bili_downloader_ui.py
+    # 5️⃣ 打包 Python 脚本
+    - name: Build EXE with PyInstaller
+      run: |
+        pyinstaller --onefile main.py --name bili_downloader_ui --add-binary "ffmpeg.exe;."
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bili_downloader_windows
-          path: dist/*.exe
+    # 6️⃣ 上传 exe 作为 artifact
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: bili_downloader_windows
+        path: dist/bili_downloader_ui.exe
+
+# name: Build Windows EXE
+
+# on:
+#   push:
+#     branches: [ "main" ]
+#   workflow_dispatch:
+
+# jobs:
+#   build-windows:
+#     runs-on: windows-latest
+
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Setup Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: "3.12"
+
+#       - name: Install dependencies
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install -r requirements.txt
+#           pip install pyinstaller
+
+#       - name: Download ffmpeg for Windows
+#         run: |
+#           New-Item -ItemType Directory -Force -Path bin
+#           mkdir bin
+#           curl -L -o ffmpeg.zip https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+#           tar -xf ffmpeg.zip
+#           $folder = Get-ChildItem -Directory | Where-Object { $_.Name -like "ffmpeg-*-essentials_build" } | Select-Object -First 1
+#           Copy-Item "$($folder.FullName)\bin\ffmpeg.exe" "bin\ffmpeg.exe"
+#           Copy-Item "$($folder.FullName)\bin\ffprobe.exe" "bin\ffprobe.exe"
+
+#       - name: Build exe
+#         run: |
+#           pyinstaller --noconfirm --windowed --onefile `
+#             --add-binary "bin\ffmpeg.exe;." `
+#             bili_downloader_ui.py
+
+#       - name: Upload artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: bili_downloader_windows
+#           path: dist/*.exe
