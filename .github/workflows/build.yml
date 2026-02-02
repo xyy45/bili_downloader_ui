@@ -1,6 +1,7 @@
+
 name: Build Windows EXE
 
-# 触发条件：push 到 main 或手动触发
+# 触发条件
 on:
   push:
     branches: [ main ]
@@ -27,23 +28,25 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyinstaller requests tqdm
 
-    # 4️⃣ 复制 ffmpeg 到项目目录（假设你把 ffmpeg.exe 放在仓库里或者提供下载）
+    # 4️⃣ 准备 ffmpeg
     - name: Prepare ffmpeg
       run: |
         if (!(Test-Path -Path ".\ffmpeg.exe")) {
+            # 下载官方 Windows ffmpeg zip
             Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile "ffmpeg.zip"
             Expand-Archive ffmpeg.zip -DestinationPath ".\ffmpeg_temp"
+            # 拷贝 ffmpeg.exe 到项目根目录
             Copy-Item -Path ".\ffmpeg_temp\ffmpeg-*-essentials_build\bin\ffmpeg.exe" -Destination ".\ffmpeg.exe"
         }
 
-    # 5️⃣ 打包 Python 脚本
+    # 5️⃣ 使用 PyInstaller 打包
     - name: Build EXE with PyInstaller
       run: |
         pyinstaller --onefile main.py --name bili_downloader_ui --add-binary "ffmpeg.exe;."
 
     # 6️⃣ 上传 exe 作为 artifact
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: bili_downloader_windows
         path: dist/bili_downloader_ui.exe
